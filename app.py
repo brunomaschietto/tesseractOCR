@@ -26,13 +26,16 @@ def extract_text():
     file = request.files['pdf']
     file.save('input.pdf')
 
-    images = convert_from_path('input.pdf', 500, poppler_path=r'C:\Program Files\poppler-24.02.0\Library\bin')
-    pytesseract.pytesseract.tesseract_cmd = "C:\Program Files\Tesseract-OCR\Tesseract.exe"
+    # No need to specify poppler_path in Linux
+    images = convert_from_path('input.pdf', 500)
+
+    # No need to set the tesseract_cmd in Linux
+    # pytesseract.pytesseract.tesseract_cmd = "C:\Program Files\Tesseract-OCR\Tesseract.exe"
 
     pages_text = []
 
-    tessdata_dir_config = r'--tessdata-dir "C:\Program Files\Tesseract-OCR\tessdata"'
-    config = r'--oem 3 --psm 6 ' + tessdata_dir_config
+    # Config without tessdata_dir_config for Linux
+    config = r'--oem 3 --psm 6'
 
     for i in range(len(images)):
         image_path = 'page' + str(i) + '.jpg'
