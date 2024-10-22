@@ -7,7 +7,7 @@ import os
 import unicodedata
 
 app = Flask(__name__)
-CORS(app, resources={r"/extract_text": {"origins": "https://10.40.22.4"}}) 
+CORS(app, resources={r"/extract_text": {"origins": "http://10.40.22.4"}}) 
 
 def normalize_text(text):
     return unicodedata.normalize('NFKD', text)
