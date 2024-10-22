@@ -61,4 +61,4 @@ def extract_text():
     return jsonify({'text': full_text, 'tamanho': tamanho})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='10.40.22.4', port=5001)
+    app.run(debug=True, host='170.231.15.47', port=5001)
