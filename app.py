@@ -7,7 +7,7 @@ import os
 import unicodedata
 
 app = Flask(__name__)
-CORS(app, resources={r"/extract_text": {"origins": "http://10.40.22.4"}}) 
+CORS(app, resources={r"/extract_text": {"origins": "https://www.legnet.com.br"}}) 
 
 def normalize_text(text):
     return unicodedata.normalize('NFKD', text)
@@ -61,4 +61,6 @@ def extract_text():
     return jsonify({'text': full_text, 'tamanho': tamanho})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    context = ('/etc/letsencrypt/live/www.legnet.com.br/fullchain.pem', 
+               '/etc/letsencrypt/live/www.legnet.com.br/privkey.pem')
+    app.run(debug=True, host='0.0.0.0', port=5001, ssl_context=context)
