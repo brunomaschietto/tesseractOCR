@@ -8,6 +8,7 @@ import unicodedata
 
 app = Flask(__name__)
 CORS(app, resources={r"/extract_text": {"origins": "https://www.legnet.com.br"}}) 
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 def normalize_text(text):
     return unicodedata.normalize('NFKD', text)
