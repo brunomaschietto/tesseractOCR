@@ -8,11 +8,7 @@ import unicodedata
 
 app = Flask(__name__)
 CORS(app, resources={r"/extract_text": {"origins": "https://www.legnet.com.br"}}) 
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB limite por requisição
-
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 def normalize_text(text):
     return unicodedata.normalize('NFKD', text)
@@ -22,65 +18,48 @@ def preprocess_image(image):
     _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     return binary
 
-def combine_chunks(file_name, total_chunks):
-    """ Combina todos os chunks recebidos para formar o arquivo PDF completo """
-    with open(file_name, 'wb') as output_file:
-        for i in range(total_chunks):
-            chunk_file = f"{file_name}_chunk_{i}"
-            with open(chunk_file, 'rb') as chunk:
-                output_file.write(chunk.read())
-            os.remove(chunk_file)  # Remove o chunk após combinar
-
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
 
 @app.route('/extract_text', methods=['POST'])
 def extract_text():
-    if 'pdf_chunk' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo foi enviado.'}), 400
+    file = request.files['pdf']
+    file.save('input.pdf')
 
-    chunk = request.files['pdf_chunk']
-    chunk_index = int(request.form['chunk_index'])
-    total_chunks = int(request.form['total_chunks'])
+    # No need to specify poppler_path in Linux
+    images = convert_from_path('input.pdf', 500)
 
-    file_name = os.path.join(UPLOAD_FOLDER, 'input.pdf')
-    
-    # Salva o chunk temporariamente
-    chunk.save(f"{file_name}_chunk_{chunk_index}")
-    
-    # Se o último chunk foi recebido, combine todos e processe o PDF
-    if chunk_index == total_chunks - 1:
-        combine_chunks(file_name, total_chunks)
+    # No need to set the tesseract_cmd in Linux
+    # pytesseract.pytesseract.tesseract_cmd = "C:\Program Files\Tesseract-OCR\Tesseract.exe"
 
-        # Processamento do arquivo combinado
-        images = convert_from_path(file_name, 500)
-        pages_text = []
+    pages_text = []
 
-        config = r'--oem 3 --psm 6'
-        for i in range(len(images)):
-            image_path = f'page{i}.jpg'
-            images[i].save(image_path, 'JPEG')
+    # Config without tessdata_dir_config for Linux
+    config = r'--oem 3 --psm 6'
 
-            image = cv2.imread(image_path)
-            processed_image = preprocess_image(image)
+    for i in range(len(images)):
+        image_path = 'page' + str(i) + '.jpg'
+        images[i].save(image_path, 'JPEG')
 
-            text = pytesseract.image_to_string(processed_image, config=config, lang='por')
-            normalized_text = normalize_text(text)
-            pages_text.append(normalized_text)
+        image = cv2.imread(image_path)
+        processed_image = preprocess_image(image)
 
-            try:
-                os.remove(image_path)
-            except OSError as e:
-                print(f"Erro ao apagar a imagem {image_path}: {e}")
+        text = pytesseract.image_to_string(processed_image, config=config, lang='por')
+        normalized_text = normalize_text(text)
+        pages_text.append(normalized_text)
 
-        os.remove(file_name)  # Remove o PDF original após o processamento
-        full_text = ' '.join(pages_text)
-        tamanho = len(full_text)
+        try:
+            os.remove(image_path)
+            print(f"Imagem {image_path} apagada com sucesso.")
+        except OSError as e:
+            print(f"Erro ao apagar a imagem {image_path}: {e}")
 
-        return jsonify({'text': full_text, 'tamanho': tamanho})
-    else:
-        return jsonify({'status': f'Chunk {chunk_index + 1}/{total_chunks} recebido.'})
+    os.remove('input.pdf')
+    full_text = ' '.join(pages_text)
+    tamanho = len(full_text)
+
+    return jsonify({'text': full_text, 'tamanho': tamanho})
 
 if __name__ == '__main__':
     context = ('/etc/letsencrypt/live/www.legnet.com.br/fullchain.pem', 
